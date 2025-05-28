@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"sync"
 	"net/http"
+	"io"
 )
 
 /*
-	"io"
+	
 	"strings"
 	"time"
 	"context"
@@ -45,19 +46,28 @@ func (q *Queue) deQueue() string {
 	return val
 }
 
-func (q *Queue) fetchUrls(url string) {
+func (q *Queue) fetchPage(url string) string {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	res, err := http.Get(url)
+	resp, err := http.Get(url)
 
 	//meaning that there's an error and its not blank
 	if err != nil {
-		fmt.Println("Error: ", err)
-		return
+		return "Error: " + err.Error()
 	}
+	defer resp.Body.Close()
 
-	fmt.Println(res)
+	// turns to bytes that need to be turned into a string
+	body, err := io.ReadAll(resp.Body)
+
+	
+	return string(body)
+}
+
+// parse webpage content
+func (q *Queue) parseWebPage(body string) {
+	
 }
 
 func main() {
@@ -66,6 +76,6 @@ func main() {
 
 	queue.enQueue((seed))
 	
-	queue.fetchUrls(queue.deQueue())
+	fmt.Println(queue.fetchPage(queue.deQueue()))
 
 }
