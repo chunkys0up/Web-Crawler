@@ -5,15 +5,16 @@ import (
 	"sync"
 	"net/http"
 	"io"
-)
+	"strings"
+	"golang.org/x/net/html"
+	"log"
+)	
 
 /*
 	
-	"strings"
 	"time"
 	"context"
-	"log"
-	"golang.org/x/net/html"
+	
 */
 
 type Queue struct {
@@ -54,20 +55,40 @@ func (q *Queue) fetchPage(url string) string {
 
 	//meaning that there's an error and its not blank
 	if err != nil {
-		return "Error: " + err.Error()
+		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	// turns to bytes that need to be turned into a string
 	body, err := io.ReadAll(resp.Body)
 
-	
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return string(body)
 }
 
 // parse webpage content
-func (q *Queue) parseWebPage(body string) {
+func (q *Queue) parseWebPage(htmlBody string) {
 	
+	reader := strings.NewReader(htmlBody)
+	doc, err := html.Parse(reader)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// loop through eac html node
+	for n := range doc.Descendants() {
+		// loop through its attributes, html has a key and value like <href = "www.example.com">
+		// key = href, value = www.example.com
+		for _, a := range n.Attr {
+			if n.Type == html.ElementNode && a.Key == "href" {
+				fmt.Println(a.Val)
+			}
+		}	
+	}
 }
 
 func main() {
@@ -76,6 +97,8 @@ func main() {
 
 	queue.enQueue((seed))
 	
-	fmt.Println(queue.fetchPage(queue.deQueue()))
+	htmlBody := queue.fetchPage(queue.deQueue())
+
+	queue.parseWebPage(htmlBody)
 
 }
