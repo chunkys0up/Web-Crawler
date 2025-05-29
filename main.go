@@ -2,19 +2,19 @@ package main
 
 import (
 	"fmt"
-	"sync"
-	"net/http"
-	"io"
-	"strings"
 	"golang.org/x/net/html"
-	"log"
-)	
+	"hash/fnv"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+)
 
 /*
-	
+
 	"time"
 	"context"
-	
+
 */
 
 type Queue struct {
@@ -47,58 +47,110 @@ func (q *Queue) deQueue() string {
 	return val
 }
 
-func (q *Queue) fetchPage(url string) string {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+type HashSet struct {
+	length uint64
+	set    map[uint64]bool // true/false if a hashed url is found
+	mu     sync.Mutex
+}
 
+func hash(url string) uint64 {
+	hash := fnv.New64a()
+	hash.Write([]byte(url))
+
+	return hash.Sum64()
+}
+
+func (h *HashSet) add(url string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// already exists, then we return false
+	hashed := hash(url)
+	if h.set[hashed] {
+		return false
+	}
+
+	h.set[hashed] = true
+	h.length++
+	return true
+}
+
+func (h *HashSet) size() uint64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return h.length
+}
+
+func fetchPage(url string) (string, bool) {
 	resp, err := http.Get(url)
-
 	//meaning that there's an error and its not blank
 	if err != nil {
-		log.Fatal(err)
+		return "", true
 	}
 	defer resp.Body.Close()
-
-	// turns to bytes that need to be turned into a string
 	body, err := io.ReadAll(resp.Body)
-
 	if err != nil {
-		log.Fatal(err)
+		return "", true
 	}
 
-	return string(body)
+	return string(body), false
+}
+
+func getHref(token html.Token) (url string, ok bool) {
+	for _, a := range token.Attr {
+		if a.Key == "href" {
+			if len(a.Val) > 0 && strings.HasPrefix(a.Val, "http") {
+				return a.Val, true
+			}
+			return "", false
+		}
+	}
+	return "", false
 }
 
 // parse webpage content
-func (q *Queue) parseWebPage(htmlBody string) {
-	
-	reader := strings.NewReader(htmlBody)
-	doc, err := html.Parse(reader)
+func parseWebPage(htmlBody string, q *Queue, visited *HashSet, maxWebsites int) {
+	tokenIndex := html.NewTokenizer(strings.NewReader(htmlBody))
+	for {
+		if tokenIndex.Next() == html.ErrorToken {
+			return
+		}
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// loop through eac html node
-	for n := range doc.Descendants() {
-		// loop through its attributes, html has a key and value like <href = "www.example.com">
-		// key = href, value = www.example.com
-		for _, a := range n.Attr {
-			if n.Type == html.ElementNode && a.Key == "href" {
-				fmt.Println(a.Val)
+		token := tokenIndex.Token()
+		if token.Type == html.StartTagToken && token.Data == "a" {
+			url, ok := getHref(token)
+			if ok && visited.size() < uint64(maxWebsites) && visited.add(url) {
+				q.enQueue(url)
+				fmt.Println(visited.size()," ",url)
 			}
-		}	
+		}
 	}
 }
 
 func main() {
+	maxWebsites := 1000
 	queue := Queue{}
-	seed := "https://www.wikipedia.org/"
-
+	set := HashSet{set: make(map[uint64]bool)}
+	seed :="https://en.wikipedia.org/wiki/Dog"
 	queue.enQueue((seed))
-	
-	htmlBody := queue.fetchPage(queue.deQueue())
+	set.add(seed)
 
-	queue.parseWebPage(htmlBody)
+	for set.size() < uint64(maxWebsites) {
+
+		 url := queue.deQueue()
+		htmlBody, err := fetchPage(url)
+
+		if !err {
+			parseWebPage(htmlBody, &queue, &set, maxWebsites)
+		}
+	}
+
+	fmt.Println("\n----- Web crawler stats -----")
+	fmt.Println("set size:", set.size())
+	fmt.Println("Current elements in queue:", queue.elementsInQueue)
+	fmt.Println("First element:",queue.elements[0])
+	
+	
 
 }
