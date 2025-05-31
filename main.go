@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 /*
 
-	"time"
 	"context"
 
 */
@@ -122,13 +122,15 @@ func parseWebPage(htmlBody string, q *Queue, visited *HashSet, maxWebsites int) 
 			url, ok := getHref(token)
 			if ok && visited.size() < uint64(maxWebsites) && visited.add(url) {
 				q.enQueue(url)
-				fmt.Println(visited.size()," ",url)
+				//fmt.Println(visited.size()," ",url)
 			}
 		}
 	}
 }
 
 func main() {
+	startNow := time.Now()
+
 	maxWebsites := 1000
 	queue := Queue{}
 	set := HashSet{set: make(map[uint64]bool)}
@@ -149,8 +151,22 @@ func main() {
 	fmt.Println("\n----- Web crawler stats -----")
 	fmt.Println("set size:", set.size())
 	fmt.Println("Current elements in queue:", queue.elementsInQueue)
-	fmt.Println("First element:",queue.elements[0])
-	
-	
-
+	fmt.Println("The operation took:",time.Since(startNow))
 }
+
+// ----- Web crawler stats -----
+// set size: 1000
+// Current elements in queue: 994
+// The operation took: 2.618358333s
+// andrewnguyen@MacBook-Pro-2 WebCrawler % go run main.go
+
+// ----- Web crawler stats -----
+// set size: 1000
+// Current elements in queue: 994
+// The operation took: 2.576759834s
+// andrewnguyen@MacBook-Pro-2 WebCrawler % go run main.go
+
+// ----- Web crawler stats -----
+// set size: 1000
+// Current elements in queue: 994
+// The operation took: 2.62936975s
