@@ -110,8 +110,15 @@ func getHref(token html.Token) (url string, ok bool) {
 }
 
 // parse webpage content
-func parseWebPage(htmlBody string, q *Queue, visited *HashSet, maxWebsites int) {
+func parseWebPage(url string, q *Queue, visited *HashSet, maxWebsites int) {
+	htmlBody, err := fetchPage(url)
+
+	if err {
+		return
+	}
+
 	tokenIndex := html.NewTokenizer(strings.NewReader(htmlBody))
+
 	for {
 		if tokenIndex.Next() == html.ErrorToken {
 			return
@@ -134,39 +141,32 @@ func main() {
 	maxWebsites := 1000
 	queue := Queue{}
 	set := HashSet{set: make(map[uint64]bool)}
-	seed :="https://en.wikipedia.org/wiki/Dog"
+	seed := "https://en.wikipedia.org/wiki/Dog"
 	queue.enQueue((seed))
 	set.add(seed)
 
 	for set.size() < uint64(maxWebsites) {
-
-		 url := queue.deQueue()
-		htmlBody, err := fetchPage(url)
-
-		if !err {
-			parseWebPage(htmlBody, &queue, &set, maxWebsites)
-		}
+		url := queue.deQueue()
+		parseWebPage(url, &queue, &set, maxWebsites)
 	}
 
 	fmt.Println("\n----- Web crawler stats -----")
 	fmt.Println("set size:", set.size())
 	fmt.Println("Current elements in queue:", queue.elementsInQueue)
-	fmt.Println("The operation took:",time.Since(startNow))
+	fmt.Println("The operation took:", time.Since(startNow))
 }
 
 // ----- Web crawler stats -----
 // set size: 1000
 // Current elements in queue: 994
-// The operation took: 2.618358333s
-// andrewnguyen@MacBook-Pro-2 WebCrawler % go run main.go
+// The operation took: 809.573208ms
 
 // ----- Web crawler stats -----
 // set size: 1000
 // Current elements in queue: 994
-// The operation took: 2.576759834s
-// andrewnguyen@MacBook-Pro-2 WebCrawler % go run main.go
+// The operation took: 785.095959ms
 
 // ----- Web crawler stats -----
 // set size: 1000
 // Current elements in queue: 994
-// The operation took: 2.62936975s
+// The operation took: 776.371875ms
