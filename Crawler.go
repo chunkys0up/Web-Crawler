@@ -11,15 +11,16 @@ import (
 )
 
 type CrawlerQueue struct {
-	mu         *sync.Mutex
-	wg         *sync.WaitGroup
-	elements   []string
-	PageURLs   map[uint64]bool // true / false if a hashed url is found
-	urlsFound  int
-	maxPages   int
+	mu        *sync.Mutex
+	wg        *sync.WaitGroup
+	elements  []string
+	PageURLs  map[uint64]bool // true / false if a hashed url is found
+	urlsFound uint64
+	maxPages  uint64
+	deQueued  uint64
 }
 
-func (crawler *CrawlerQueue) size() int {
+func (crawler *CrawlerQueue) size() uint64 {
 	crawler.mu.Lock()
 	defer crawler.mu.Unlock()
 
@@ -61,6 +62,7 @@ func (crawler *CrawlerQueue) deQueue() (bool, string) {
 	if len(crawler.elements) > 0 {
 		val := crawler.elements[0]
 		crawler.elements = crawler.elements[1:]
+		crawler.deQueued++
 		return true, val
 	}
 
@@ -97,17 +99,18 @@ func getURLs(url string) ([]string, bool) {
 		token := tokenIndex.Token()
 		if token.Type == html.StartTagToken && token.Data == "a" {
 			// now we have to check if the html line has a valid url
-			
+
 			for _, attr := range token.Attr {
 				// make sure its a wikipedia article
 				if attr.Key == "href" {
 					href := attr.Val
+					// what href shows: /wiki/Mongoose#Taxonomy
 
 					if strings.HasPrefix(href, "/wiki/") && !strings.Contains(href, ":") {
 						fullURL := "https://en.wikipedia.org" + href
 						urls = append(urls, fullURL)
 					}
-				} 
+				}
 			}
 		}
 	}
@@ -117,8 +120,8 @@ func (crawler *CrawlerQueue) crawl() { // add db in argument later
 	defer crawler.wg.Done()
 
 	for {
-		if crawler.urlsFound > crawler.maxPages {
-			fmt.Print("Maximum number of pages reached\n")
+		if crawler.size() > crawler.maxPages {
+			fmt.Print("\nMaximum number of pages found\n\n")
 			return
 		}
 
@@ -140,6 +143,7 @@ func (crawler *CrawlerQueue) crawl() { // add db in argument later
 
 		// get rid of duplicate urls and then enQueue them
 		for _, newURL := range urls {
+
 			if !crawler.addToSet(newURL) {
 				//fmt.Printf("Already parsed %s. Skipping..\n.", newURL)
 				continue
