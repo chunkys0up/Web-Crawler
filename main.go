@@ -17,11 +17,11 @@ func main() {
 		elements:  []string{},
 		PageURLs:  make(map[uint64]bool),
 		urlsFound: 0,
-		maxPages:  25000,
+		maxPages:  5000,
 	}
 	fmt.Println("Initialied CrawlerQueue")
 
-	seed := "https://en.wikipedia.org/wiki/Dog"
+	seed := "https://en.wikipedia.org/wiki/Main_Page"
 	crawler.enQueue(seed)
 	crawler.addToSet(seed)
 
