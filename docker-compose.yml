@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: wikiDB
+    environment:
+      POSTGRES_USER: crawler_user
+      POSTGRES_PASSWORD: securepass
+      POSTGRES_DB: wikiDB
+    ports:
+      - "1234:5432"       # maps host 1234 -> container 5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://crawler_user:securepass@db:5432/wikiDB
+    ports:
+      - "8080:8080"   
+    command: ["./crawler"]
+
+volumes:
+  pgdata:

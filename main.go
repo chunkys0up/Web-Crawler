@@ -4,9 +4,30 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"github.com/jackc/pgx/v5"
+	"context"
+	"log"
+	"os"
 )
 
 func main() {
+	connString := os.Getenv("DATABASE_URL")
+	if connString == "" {
+		log.Fatal("DATABASE_URL not found/set")
+	}
+
+	conn, err := pgx.Connect(context.Background(), connString)
+	if err != nil {
+		log.Fatalf("failed to connect to database :%v\n", err)
+		os.Exit(1)
+	}
+
+	defer conn.Close(context.Background())
+
+	fmt.Println("Postgres Database is ready")
+
+	return
+
 	startNow := time.Now()
 
 	maxConcurrency := 10
@@ -17,7 +38,7 @@ func main() {
 		elements:  []string{},
 		PageURLs:  make(map[uint64]bool),
 		urlsFound: 0,
-		maxPages:  5000,
+		maxPages:  10000,
 	}
 	fmt.Println("Initialied CrawlerQueue")
 
