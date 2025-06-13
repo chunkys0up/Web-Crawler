@@ -1,5 +1,31 @@
 # Web-Crawler
 
-Uses breadth first search to parse through English Wikipedia articles.
+This projects crawls Wikipedia articles and stores their metadata (name and URL) in a PostgreSQL database. Built with Go and Docker Compose.
 
-In each Goroutine, make sure that the we can crawl through the URL and fetch its html code. Then parse through it to find all the Wikipedia articles. Next it loops through the articles to make sure that they are distinct and add them to the queue. 
+## Prerequisites
+- Docker
+- Docker Compose
+
+## To Run the Repository
+```bash
+git clone https://github.com/chunkys0up/Web-Crawler.git
+```
+
+Make sure dependencies are installed
+```bash
+`go mod tidy`
+```
+
+## Run the Docker Compose
+```bash
+docker-compose up --build
+```
+
+Optional Reset the Database
+```bash
+docker-compose down -v
+```
+
+Might have to run `docker-compose up --build` twice in case the database isn't set up before the program tries running.
+
+

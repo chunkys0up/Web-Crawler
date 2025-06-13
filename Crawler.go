@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"golang.org/x/net/html"
+	"github.com/jackc/pgx/v5"
 	"hash/fnv"
 	"io"
 	"net/http"
@@ -116,23 +116,21 @@ func getURLs(url string) ([]string, bool) {
 	}
 }
 
-func (crawler *CrawlerQueue) crawl() { // add db in argument later
+func (crawler *CrawlerQueue) crawl(conn *pgx.Conn) {
 	defer crawler.wg.Done()
 
 	for {
+		// maximum pages found
 		if crawler.size() > crawler.maxPages {
-			fmt.Print("\nMaximum number of pages found\n\n")
 			return
 		}
 
 		err, url := crawler.deQueue()
 
 		if !err {
-			//fmt.Print("Failed to deQueue from queue\n")
+			//log.Fatal("Failed to deQueue from queue\n")
 			return
 		}
-
-		fmt.Printf("Crawling through %s\n", url)
 
 		// Fetching HTML, and content
 		urls, ok := getURLs(url)
@@ -143,13 +141,14 @@ func (crawler *CrawlerQueue) crawl() { // add db in argument later
 
 		// get rid of duplicate urls and then enQueue them
 		for _, newURL := range urls {
-
+			
+			// skips found urls
 			if !crawler.addToSet(newURL) {
-				//fmt.Printf("Already parsed %s. Skipping..\n.", newURL)
 				continue
 			}
-			fmt.Println(newURL)
+			insertArticle(conn, newURL[len("https://en.wikipedia.org/wiki/"):], newURL)
 			crawler.enQueue(newURL)
 		}
 	}
 }
+
