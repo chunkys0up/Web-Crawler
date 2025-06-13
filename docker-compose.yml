@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: securepass
       POSTGRES_DB: wikiDB
     ports:
-      - "1234:5432"       # maps host 1234 -> container 5432
+      - "1234:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -17,11 +17,11 @@ services:
     build: .
     depends_on:
       - db
+    entrypoint: ["./crawler"]
     environment:
       DATABASE_URL: postgres://crawler_user:securepass@db:5432/wikiDB
     ports:
-      - "8080:8080"   
-    command: ["./crawler"]
+      - "8080:8080"
 
 volumes:
   pgdata:
